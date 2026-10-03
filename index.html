@@ -1,10 +1,359 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Robótica Móvil</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memoria Técnica: Basic Vacuum Cleaner</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .document {
+            max-width: 840px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #111111;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: #666666;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #111111;
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 1px solid #d0d0d0;
+            padding-bottom: 0.3rem;
+        }
+
+        h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-top: 1.3rem;
+            margin-bottom: 0.4rem;
+        }
+
+        p {
+            margin: 0 0 1rem 0;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin: 0 0 1rem 1.5rem;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 0.3rem;
+        }
+
+        code {
+            font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9em;
+            background-color: #f4f4f4;
+            padding: 0.15em 0.35em;
+        }
+
+        figure.diagram {
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        figure.diagram svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        figure.diagram figcaption {
+            font-size: 0.85rem;
+            color: #555555;
+            margin-top: 0.6rem;
+            font-style: italic;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        th {
+            border-top: 2px solid #000000;
+            border-bottom: 1px solid #000000;
+            padding: 0.6rem 0.5rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            border-bottom: 1px solid #e5e5e5;
+            padding: 0.6rem 0.5rem;
+            vertical-align: top;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 2px solid #000000;
+        }
+
+        .equation {
+            display: block;
+            text-align: center;
+            font-family: Consolas, monospace;
+            font-weight: 600;
+            margin: 1rem 0;
+        }
+    </style>
 </head>
 <body>
-  <h1>Robótica Móvil</h1>
+
+<div class="document">
+
+    <header>
+        <h1>Memoria Técnica</h1>
+        <div class="meta">Práctica: Basic Vacuum Cleaner</div>
+    </header>
+
+    <h2>1. Objetivo</h2>
+    <p>
+        El objetivo es cubrir el mayor porcentaje posible de la casa. Como los sensores de choque físicos (bumpers) están desactivados, usamos únicamente el sensor láser frontal de 180° (un haz por grado) para detectar obstáculos y decidir los movimientos del robot.
+    </p>
+
+    <h2>2. Máquina de Estados (FSM)</h2>
+    <p>
+        El comportamiento del robot se organiza en cuatro estados sencillos:
+    </p>
+    <ul>
+        <li><strong>FORWARD:</strong> Avanza recto para cruzar habitaciones y explorar la casa.</li>
+        <li><strong>PENETRATE:</strong> Avanza un poco más hacia el centro de la habitación antes de confirmar la espiral, evitando empezar pegado a la puerta.</li>
+        <li><strong>SPIRAL:</strong> Limpia zonas amplias haciendo una espiral que se va abriendo de forma continua.</li>
+        <li><strong>TURN:</strong> Gira en el sitio hacia el lado más despejado cuando detecta un obstáculo enfrente.</li>
+    </ul>
+
+    <figure class="diagram">
+        <svg width="780" height="340" viewBox="0 0 780 340" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#111111"/>
+                </marker>
+                <marker id="arrow-dashed" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#555555"/>
+                </marker>
+            </defs>
+
+            <circle cx="80" cy="70" r="6" fill="#111111" />
+            <line x1="86" y1="70" x2="135" y2="70" stroke="#111111" stroke-width="1.8" marker-end="url(#arrow)" />
+            <text x="80" y="52" font-size="11" font-weight="700" text-anchor="middle">Inicio</text>
+
+            <rect x="140" y="45" width="125" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+            <text x="202" y="74" font-size="13" font-weight="700" text-anchor="middle">FORWARD</text>
+
+            <rect x="515" y="45" width="125" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+            <text x="577" y="74" font-size="13" font-weight="700" text-anchor="middle">PENETRATE</text>
+
+            <rect x="515" y="250" width="125" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+            <text x="577" y="279" font-size="13" font-weight="700" text-anchor="middle">SPIRAL</text>
+
+            <rect x="140" y="250" width="125" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+            <text x="202" y="279" font-size="13" font-weight="700" text-anchor="middle">TURN</text>
+
+            <path d="M 265 60 L 507 60" stroke="#111111" stroke-width="1.4" marker-end="url(#arrow)" />
+            <text x="386" y="52" font-size="10" font-weight="500" text-anchor="middle">Espacio libre &amp; Cooldown listo</text>
+
+            <path d="M 515 78 L 273 78" stroke="#555555" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-dashed)" />
+            <rect x="305" y="82" width="165" height="14" fill="#ffffff" />
+            <text x="387" y="93" font-size="10" font-weight="500" text-anchor="middle" fill="#444444">Espacio insuficiente tras avanzar</text>
+
+            <path d="M 577 93 L 577 242" stroke="#111111" stroke-width="1.4" marker-end="url(#arrow)" />
+            <text x="587" y="165" font-size="10" font-weight="500" text-anchor="start">
+                <tspan x="587" dy="0">Tiempo completado &amp;</tspan>
+                <tspan x="587" dy="14">espacio libre confirmado</tspan>
+            </text>
+
+            <path d="M 515 274 L 273 274" stroke="#111111" stroke-width="1.4" marker-end="url(#arrow)" />
+            <text x="386" y="266" font-size="10" font-weight="500" text-anchor="middle">Pared de frente o W mínima</text>
+
+            <path d="M 165 250 L 165 101" stroke="#111111" stroke-width="1.4" marker-end="url(#arrow)" />
+            <text x="155" y="165" font-size="10" font-weight="500" text-anchor="end">
+                <tspan x="155" dy="0">Giro terminado &amp; frente libre</tspan>
+                <tspan x="155" dy="14">(con pausa corta)</tspan>
+            </text>
+
+            <path d="M 220 93 L 220 242" stroke="#111111" stroke-width="1.4" marker-end="url(#arrow)" />
+            <text x="228" y="165" font-size="10" font-weight="500" text-anchor="start">Obstáculo frontal</text>
+
+            <path d="M 515 93 L 273 245" stroke="#555555" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-dashed)" />
+            <rect x="330" y="160" width="125" height="15" fill="#ffffff" />
+            <text x="392" y="172" font-size="10" font-weight="500" text-anchor="middle" fill="#444444">Obstáculo frontal</text>
+        </svg>
+        <figcaption>Figura 1. Diagrama de la máquina de estados.</figcaption>
+    </figure>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Estado actual</th>
+                <th>Condición</th>
+                <th>Acción</th>
+                <th>Siguiente estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>FORWARD</code></td>
+                <td>Todos los rayos ven espacio libre y terminó el cooldown</td>
+                <td>Sigue recto y activa el temporizador</td>
+                <td><code>PENETRATE</code></td>
+            </tr>
+            <tr>
+                <td><code>FORWARD</code></td>
+                <td>Entra un obstáculo en la caja frontal</td>
+                <td>Se frena y elige sentido de giro</td>
+                <td><code>TURN</code></td>
+            </tr>
+            <tr>
+                <td><code>PENETRATE</code></td>
+                <td>Aparece un obstáculo de frente al avanzar</td>
+                <td>Cancela la espiral y prepara el giro</td>
+                <td><code>TURN</code></td>
+            </tr>
+            <tr>
+                <td><code>PENETRATE</code></td>
+                <td>Termina el tiempo de avance y sigue habiendo espacio</td>
+                <td>Empieza la espiral</td>
+                <td><code>SPIRAL</code></td>
+            </tr>
+            <tr>
+                <td><code>PENETRATE</code></td>
+                <td>Termina el tiempo de avance pero ya no hay suficiente espacio</td>
+                <td>Cancela la espiral y sigue recto</td>
+                <td><code>FORWARD</code></td>
+            </tr>
+            <tr>
+                <td><code>SPIRAL</code></td>
+                <td>Detecta pared enfrente o alcanza la velocidad angular mínima</td>
+                <td>Se frena, guarda el tiempo para cooldown y gira</td>
+                <td><code>TURN</code></td>
+            </tr>
+            <tr>
+                <td><code>TURN</code></td>
+                <td>Termina el tiempo de giro y el frente está libre</td>
+                <td>Pausa breve a velocidad cero antes de arrancar</td>
+                <td><code>FORWARD</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Decisiones de Diseño</h2>
+
+    <h3>3.1. Caja de Detección Frontal Rectangular</h3>
+    <p>
+        Al principio usaba una distancia fija igual para todos los rayos del láser (un rango circular). El problema era que, al pasar cerca de una pared o cruzar una puerta, los rayos de los lados detectaban el marco y el robot se frenaba pensando que iba a chocar, aunque fuera en paralelo.
+    </p>
+    <p>
+        Para corregirlo, pasé los datos del láser a coordenadas cartesianas (<code>x</code> hacia adelante e <code>y</code> hacia los lados) y definí una caja rectangular frente al robot. El ancho de la caja cubre el tamaño del chasis con un pequeño margen de seguridad y el largo da distancia suficiente para frenar. De esta forma, el robot ignora las paredes que lleva a los lados y puede cruzar puertas sin frenarse en falso.
+    </p>
+
+    <figure class="diagram">
+        <svg width="500" height="280" viewBox="0 0 500 280" xmlns="http://www.w3.org/2000/svg">
+            <rect x="180" y="60" width="140" height="140" fill="none" stroke="#666666" stroke-width="1.8" stroke-dasharray="5 4" />
+            <text x="250" y="52" font-size="11" font-weight="600" text-anchor="middle" fill="#666666">Caja rectangular</text>
+
+            <line x1="250" y1="200" x2="180" y2="200" stroke="#dc2626" stroke-width="2" />
+            <line x1="180" y1="200" x2="80" y2="200" stroke="#fca5a5" stroke-width="1.4" />
+            <text x="70" y="204" font-size="10" font-weight="600" text-anchor="end">180° (+Y)</text>
+
+            <line x1="250" y1="200" x2="320" y2="200" stroke="#dc2626" stroke-width="2" />
+            <line x1="320" y1="200" x2="420" y2="200" stroke="#fca5a5" stroke-width="1.4" />
+            <text x="430" y="204" font-size="10" font-weight="600" text-anchor="start">0° (-Y)</text>
+
+            <line x1="250" y1="200" x2="180" y2="155" stroke="#dc2626" stroke-width="2" />
+            <line x1="180" y1="155" x2="100" y2="105" stroke="#fca5a5" stroke-width="1.4" />
+
+            <line x1="250" y1="200" x2="320" y2="155" stroke="#dc2626" stroke-width="2" />
+            <line x1="320" y1="155" x2="400" y2="105" stroke="#fca5a5" stroke-width="1.4" />
+
+            <line x1="250" y1="200" x2="200" y2="60" stroke="#dc2626" stroke-width="2" />
+            <line x1="200" y1="60" x2="185" y2="25" stroke="#fca5a5" stroke-width="1.4" stroke-dasharray="3 3" />
+
+            <line x1="250" y1="200" x2="300" y2="60" stroke="#dc2626" stroke-width="2" />
+            <line x1="300" y1="60" x2="315" y2="25" stroke="#fca5a5" stroke-width="1.4" stroke-dasharray="3 3" />
+
+            <line x1="250" y1="200" x2="250" y2="60" stroke="#dc2626" stroke-width="2.2" />
+            <line x1="250" y1="60" x2="250" y2="20" stroke="#fca5a5" stroke-width="1.4" stroke-dasharray="3 3" />
+            <text x="250" y="12" font-size="10" font-weight="600" text-anchor="middle">90° (Frente / +X)</text>
+
+            <circle cx="250" cy="235" r="35" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+            <text x="250" y="239" font-size="10" font-weight="600" text-anchor="middle">Robot</text>
+            <circle cx="250" cy="200" r="3.5" fill="#dc2626" />
+        </svg>
+        <figcaption>Figura 2. Caja rectangular frontal sobre el sensor láser.</figcaption>
+    </figure>
+
+    <h3>3.2. Dirección del Giro Evasivo Usando Datos Polares</h3>
+    <p>
+        La caja rectangular solo se usa para saber si hay algo de frente que nos obligue a frenar. Pero para decidir hacia qué lado girar, usamos directamente los datos polares del láser. Dividimos los rayos en dos sectores: izquierda y derecha. Comparamos la distancia media libre de cada lado y hacemos que el robot gire hacia el lado más despejado.
+    </p>
+
+    <h3>3.3. Adentrado en Habitaciones (Estado PENETRATE)</h3>
+    <p>
+        Al entrar en una habitación, el láser detectaba espacio abierto justo al pasar la puerta. Si empezaba la espiral en ese instante, el robot se ponía a girar pegado a la entrada y chocaba enseguida con la pared o el marco por el que acababa de entrar.
+    </p>
+    <p>
+        Para solucionarlo creé el estado <code>PENETRATE</code>. Cuando ve espacio abierto, avanza recto unos segundos hacia el centro de la habitación. Si durante ese avance se encuentra algo de frente, cancela la espiral y esquiva. Si al terminar el tiempo sigue habiendo espacio libre, empieza la espiral mucho más centrado en la habitación y puede limpiar mucho mejor sin chocar tan rápido.
+    </p>
+
+    <h3>3.4. Espiral en Dos Fases (+V y -W) y Ajuste de Parámetros</h3>
+    <p>
+        El radio de curvatura de la espiral depende de la velocidad lineal <em>v</em> y de la velocidad angular &omega;:
+    </p>
+    <div class="equation">
+        r = v / &omega;
+    </div>
+    <p>
+        Si dejamos &omega; fija y solo subimos <em>v</em>, llega un punto en que <em>v</em> alcanza su velocidad máxima. A partir de ahí el radio no crece más y el robot se queda dando vueltas en el mismo círculo.
+    </p>
+    <p>
+        Para que la espiral siga abriéndose en habitaciones grandes, la dividí en dos fases:
+    </p>
+    <ol>
+        <li><strong>Fase 1 (+V):</strong> Mantiene &omega; fija y va aumentando <em>v</em> hasta llegar al tope de velocidad lineal.</li>
+        <li><strong>Fase 2 (-W):</strong> Con <em>v</em> fija en su valor máximo, empieza a reducir gradualmente &omega;. Al hacerse más pequeña la velocidad angular, el radio sigue creciendo hasta que el robot encuentra una pared o llega a una velocidad angular mínima.</li>
+    </ol>
+    <p>
+        Después fui ajustando a mano cómo de rápido sube <em>v</em> y cómo baja &omega;. Si cambiaban demasiado rápido, el radio crecía de golpe y dejaba zonas de suelo sin limpiar entre vuelta y vuelta. Con el ajuste final, las vueltas quedan lo bastante juntas para no dejar huecos de suciedad dentro del área cubierta.
+    </p>
+
+    <h2>4. Ajustes Prácticos y Simulación</h2>
+    <ul>
+        <li><strong>Precomputación de senos y cosenos:</strong> Calcular el seno y coseno de 180 rayos en cada ciclo a 30 Hz gasta bastante CPU. Como los ángulos de los rayos nunca cambian respecto al robot, se calculan una sola vez al arrancar y se guardan en una lista.</li>
+        <li><strong>Pausa para asentar las ruedas:</strong> En Gazebo, si pasas de girar a avanzar recto sin parar, la inercia hace que el robot salga haciendo una curva. Añadí una pausa corta a velocidad cero tras terminar el giro para que las ruedas se asienten antes de arrancar en línea recta.</li>
+        <li><strong>Tratamiento de valores infinitos:</strong> Cuando un rayo láser apunta al vacío y no choca con nada, Gazebo devuelve <code>inf</code>. Si simplemente quitábamos esos datos, la media de ese lado quedaba en cero y el robot pensaba que el lado vacío era una pared. La solución fue cambiar los <code>inf</code> por el rango máximo del láser, haciendo que el robot prefiera girar hacia donde no hay nada.</li>
+    </ul>
+
+</div>
+
 </body>
 </html>
