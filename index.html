@@ -74,7 +74,7 @@
             padding: 0.15em 0.35em;
         }
 
-        figure.diagram {
+        figure.diagram, figure.video-container {
             margin: 2rem 0;
             text-align: center;
         }
@@ -86,11 +86,29 @@
             height: auto;
         }
 
-        figure.diagram figcaption {
+        figure.diagram figcaption, figure.video-container figcaption {
             font-size: 0.85rem;
             color: #555555;
             margin-top: 0.6rem;
             font-style: italic;
+        }
+
+        /* Estilos del reproductor de vídeo */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            background-color: #000000;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e5e5e5;
+        }
+
+        .video-wrapper video {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 480px;
         }
 
         table {
@@ -352,6 +370,21 @@
         <li><strong>Pausa para asentar las ruedas:</strong> En Gazebo, si pasas de girar a avanzar recto sin parar, la inercia hace que el robot salga haciendo una curva. Añadí una pausa corta a velocidad cero tras terminar el giro para que las ruedas se asienten antes de arrancar en línea recta.</li>
         <li><strong>Tratamiento de valores infinitos:</strong> Cuando un rayo láser apunta al vacío y no choca con nada, Gazebo devuelve <code>inf</code>. Si simplemente quitábamos esos datos, la media de ese lado quedaba en cero y el robot pensaba que el lado vacío era una pared. La solución fue cambiar los <code>inf</code> por el rango máximo del láser, haciendo que el robot prefiera girar hacia donde no hay nada.</li>
     </ul>
+
+    <h2>5. Demostración en Vídeo</h2>
+    <p>
+        A continuación se muestra la ejecución completa del algoritmo en simulación dentro del entorno Gazebo:
+    </p>
+
+    <figure class="video-container">
+        <div class="video-wrapper">
+            <video controls preload="metadata" playsinline>
+                <source src="video.mp4" type="video/mp4">
+                Tu navegador no soporta la reproducción de vídeo HTML5.
+            </video>
+        </div>
+        <figcaption>Vídeo 1. Ejecución del aspirador autónomo completando la cobertura de la casa.</figcaption>
+    </figure>
 
 </div>
 
