@@ -21,6 +21,7 @@
 
         .tabs-nav {
             display: flex;
+            flex-wrap: wrap;
             gap: 0.4rem;
             border-bottom: 2px solid #111111;
             margin-bottom: 2rem;
@@ -29,13 +30,14 @@
 
         .tab-btn {
             font-family: inherit;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 600;
+            white-space: nowrap;
             color: #555555;
             background-color: #f4f4f4;
             border: 1px solid #d0d0d0;
             border-bottom: none;
-            padding: 0.65rem 1.25rem;
+            padding: 0.65rem 0.9rem;
             cursor: pointer;
             border-radius: 4px 4px 0 0;
             transition: background-color 0.15s ease, color 0.15s ease;
@@ -195,6 +197,9 @@
         </button>
         <button class="tab-btn" onclick="openPractice(event, 'follow-line')">
             Práctica 2: Visual Follow Line
+        </button>
+        <button class="tab-btn" onclick="openPractice(event, 'vff-navigation')">
+            Práctica 3: Local Navigation with VFF
         </button>
     </nav>
 
@@ -644,6 +649,379 @@
             <div class="video-wrapper">
                 <video controls preload="metadata" playsinline>
                     <source src="videoP2.mp4" type="video/mp4">
+                    Tu navegador no soporta la reproducción de vídeo HTML5.
+                </video>
+            </div>
+        </figure>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- PESTAÑA 3: LOCAL NAVIGATION WITH VFF                                -->
+    <!-- =================================================================== -->
+    <div id="vff-navigation" class="tab-content">
+        <header>
+            <h1>Memoria Técnica</h1>
+            <div class="meta">Práctica: Local Navigation with VFF</div>
+        </header>
+
+        <h2>1. Objetivo</h2>
+        <p>
+            El objetivo es que el monoplaza recorra el circuito pasando por los waypoints que proporciona la interfaz <code>WebGUI</code> y esquivando los obstáculos que hay sobre la pista. Para ello se implementa el algoritmo de navegación local VFF (<em>Virtual Force Field</em>): el waypoint genera una fuerza de atracción que tira del coche, cada obstáculo detectado por el láser frontal de 180° (un haz por grado y 10 m de alcance) genera una fuerza de repulsión, y el coche se mueve siguiendo la suma de ambas.
+        </p>
+
+        <h2>2. Algoritmo VFF y Lazo de Control</h2>
+        <p>
+            En cada ciclo se calculan tres vectores en el sistema de referencia del coche (<code>x</code> hacia adelante e <code>y</code> hacia la izquierda), y a partir de la resultante se obtienen las dos órdenes de movimiento:
+        </p>
+        <ul>
+            <li><strong>Vector de atracción:</strong> Apunta hacia un objetivo local que se desplaza de forma progresiva hacia el waypoint actual. Se escala con <code>K_ATT</code> y su módulo se acota entre <code>MIN_ATT</code> y <code>MAX_ATT</code>.</li>
+            <li><strong>Vector de repulsión:</strong> Cada rayo del láser empuja en sentido contrario a su dirección con un módulo inversamente proporcional al cuadrado de la distancia. Se promedian los 180 rayos, se escala con <code>K_REP</code> y se suaviza con un filtro paso bajo.</li>
+            <li><strong>Vector resultante:</strong> Es la suma de los dos anteriores e indica hacia dónde y con qué intensidad debe moverse el coche.</li>
+            <li><strong>Órdenes de movimiento:</strong> La velocidad angular sale de un controlador PD sobre el ángulo de la resultante, y la velocidad lineal es directamente su módulo.</li>
+        </ul>
+
+        <figure class="diagram">
+            <svg width="780" height="330" viewBox="0 0 780 330" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <marker id="arrow-vff" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#111111"/>
+                    </marker>
+                    <marker id="arrow-vff-dashed" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#555555"/>
+                    </marker>
+                </defs>
+
+                <rect x="20" y="40" width="130" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="85" y="61" font-size="12" font-weight="700" text-anchor="middle">Waypoint</text>
+                <text x="85" y="77" font-size="10" fill="#555555" text-anchor="middle">(WebGUI)</text>
+
+                <rect x="185" y="40" width="140" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="255" y="61" font-size="12" font-weight="700" text-anchor="middle">Objetivo local</text>
+                <text x="255" y="77" font-size="10" fill="#555555" text-anchor="middle">(deslizante)</text>
+
+                <rect x="360" y="40" width="130" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="425" y="61" font-size="12" font-weight="700" text-anchor="middle">Atracción</text>
+                <text x="425" y="77" font-size="10" fill="#555555" text-anchor="middle">K_att · p_rel, acotado</text>
+
+                <rect x="20" y="180" width="130" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="85" y="201" font-size="12" font-weight="700" text-anchor="middle">Láser 180°</text>
+                <text x="85" y="217" font-size="10" fill="#555555" text-anchor="middle">(HAL)</text>
+
+                <rect x="185" y="180" width="140" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="255" y="201" font-size="12" font-weight="700" text-anchor="middle">Repulsión</text>
+                <text x="255" y="217" font-size="10" fill="#555555" text-anchor="middle">media de 1/d²</text>
+
+                <rect x="360" y="180" width="130" height="48" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="425" y="201" font-size="12" font-weight="700" text-anchor="middle">Filtro</text>
+                <text x="425" y="217" font-size="10" fill="#555555" text-anchor="middle">paso bajo</text>
+
+                <line x1="150" y1="64" x2="178" y2="64" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <line x1="325" y1="64" x2="353" y2="64" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <line x1="150" y1="204" x2="178" y2="204" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <line x1="325" y1="204" x2="353" y2="204" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+
+                <circle cx="530" cy="134" r="14" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="530" y="138" font-size="13" font-weight="700" text-anchor="middle">&Sigma;</text>
+
+                <path d="M 490 64 L 530 64 L 530 113" fill="none" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <text x="510" y="56" font-size="10" font-weight="600" text-anchor="middle">F_att</text>
+                <path d="M 490 204 L 530 204 L 530 155" fill="none" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <text x="510" y="196" font-size="10" font-weight="600" text-anchor="middle">F_rep</text>
+
+                <path d="M 544 134 L 560 134" fill="none" stroke="#111111" stroke-width="1.6" />
+                <path d="M 560 134 L 560 86 L 583 86" fill="none" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <path d="M 560 134 L 560 182 L 583 182" fill="none" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <text x="568" y="138" font-size="10" font-weight="600" text-anchor="start">F_res</text>
+
+                <rect x="590" y="60" width="170" height="52" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="675" y="82" font-size="12" font-weight="700" text-anchor="middle">Controlador PD</text>
+                <text x="675" y="99" font-size="10" fill="#555555" text-anchor="middle">w = Kp·α + Kd·dα/dt</text>
+
+                <rect x="590" y="156" width="170" height="52" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="675" y="178" font-size="12" font-weight="700" text-anchor="middle">Velocidad lineal</text>
+                <text x="675" y="195" font-size="10" fill="#555555" text-anchor="middle">v = min(|F_res|, V_max)</text>
+
+                <rect x="590" y="258" width="170" height="52" rx="4" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="675" y="280" font-size="12" font-weight="700" text-anchor="middle">Monoplaza F1</text>
+                <text x="675" y="297" font-size="10" fill="#555555" text-anchor="middle">(HAL.setV / HAL.setW)</text>
+
+                <path d="M 760 86 L 774 86 L 774 270 L 767 270" fill="none" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+                <line x1="675" y1="208" x2="675" y2="250" stroke="#111111" stroke-width="1.6" marker-end="url(#arrow-vff)" />
+
+                <path d="M 590 284 L 85 284 L 85 236" fill="none" stroke="#555555" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-vff-dashed)" />
+                <text x="340" y="277" font-size="10" font-weight="500" text-anchor="middle" fill="#444444">Nueva pose y nuevas lecturas del entorno</text>
+            </svg>
+            <figcaption>Figura 1. Diagrama de bloques del algoritmo VFF y del lazo de control.</figcaption>
+        </figure>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Componente</th>
+                    <th>Formulación</th>
+                    <th>Propósito en el bucle</th>
+                    <th>Efecto sobre el vehículo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Atracción</code></td>
+                    <td><code>K_att · p_rel</code>, acotado</td>
+                    <td>Señala la dirección del objetivo local</td>
+                    <td>Hace avanzar al coche a lo largo del circuito</td>
+                </tr>
+                <tr>
+                    <td><code>Repulsión</code></td>
+                    <td><code>−K_rep · media(u_i / d_i²)</code></td>
+                    <td>Resume la proximidad de los obstáculos detectados</td>
+                    <td>Lo aparta de los obstáculos cercanos y lo frena</td>
+                </tr>
+                <tr>
+                    <td><code>Resultante</code></td>
+                    <td><code>F_att + F_rep</code></td>
+                    <td>Combina objetivo y obstáculos en un único vector</td>
+                    <td>Define el rumbo deseado y su intensidad</td>
+                </tr>
+                <tr>
+                    <td><code>Velocidad angular</code></td>
+                    <td><code>Kp · α + Kd · dα/dt</code></td>
+                    <td>Lleva a cero el ángulo α de la resultante</td>
+                    <td>Orienta el coche hacia la resultante sin sobreimpulso</td>
+                </tr>
+                <tr>
+                    <td><code>Velocidad lineal</code></td>
+                    <td><code>min(|F_res|, V_max)</code></td>
+                    <td>Traduce la intensidad de la resultante en avance</td>
+                    <td>Acelera con la vía libre y frena cerca de obstáculos</td>
+                </tr>
+                <tr>
+                    <td><code>Recuperación</code></td>
+                    <td><code>|α| &gt; 90°</code></td>
+                    <td>Trata los casos en que la resultante apunta hacia atrás</td>
+                    <td>Avanza muy despacio o gira en el sitio hacia el objetivo</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>3. Decisiones de Diseño</h2>
+
+        <h3>3.1. Repulsión Media con Decaimiento Cuadrático</h3>
+        <p>
+            El láser solo cubre los 180° delanteros, así que todos los rayos miran hacia adelante y todas las repulsiones tienen una componente hacia atrás. Al sumarlas, las componentes laterales de un lado y otro se compensan en parte, pero las traseras se acumulan siempre. Con una repulsión de tipo <code>1/d</code> sin normalizar, el vector rojo apuntaba hacia atrás casi todo el tiempo por culpa de las paredes, dominaba sobre la atracción y obligaba a añadir correcciones artificiales que acababan generando zigzag en las rectas.
+        </p>
+        <p>
+            La solución fue usar un decaimiento cuadrático y promediar sobre los 180 rayos:
+        </p>
+        <div class="equation">
+            F_rep = −K_rep · (1/N) · &Sigma; (1/d_i²) · (cos θ_i, sin θ_i)
+        </div>
+        <p>
+            Con <code>1/d²</code>, las paredes que están a varios metros aportan una repulsión casi nula y en recta manda la atracción. En cambio, cuando un obstáculo está cerca, su repulsión crece muy rápido y pasa a dominar. Los rayos que no tocan nada devuelven <code>inf</code>, por lo que su aportación es cero, pero siguen contando en la media.
+        </p>
+
+        <figure class="diagram">
+            <svg width="520" height="290" viewBox="0 0 520 290" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <marker id="arrow-vff-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#16a34a"/>
+                    </marker>
+                    <marker id="arrow-vff-red" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#dc2626"/>
+                    </marker>
+                    <marker id="arrow-vff-black" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#111111"/>
+                    </marker>
+                </defs>
+
+                <circle cx="220" cy="30" r="6" fill="#16a34a" stroke="#111111" stroke-width="1.2" />
+                <text x="232" y="34" font-size="10" font-weight="700" fill="#16a34a" text-anchor="start">Objetivo local</text>
+
+                <rect x="290" y="90" width="55" height="75" rx="4" fill="#efefef" stroke="#111111" stroke-width="1.6" />
+                <text x="317" y="131" font-size="10" font-weight="600" text-anchor="middle">Obstáculo</text>
+
+                <line x1="260" y1="205" x2="290" y2="150" stroke="#fca5a5" stroke-width="1.2" />
+                <line x1="260" y1="205" x2="290" y2="120" stroke="#fca5a5" stroke-width="1.2" />
+                <line x1="260" y1="205" x2="300" y2="165" stroke="#fca5a5" stroke-width="1.2" />
+                <line x1="260" y1="205" x2="325" y2="165" stroke="#fca5a5" stroke-width="1.2" />
+
+                <line x1="260" y1="205" x2="260" y2="120" stroke="#999999" stroke-width="1.2" stroke-dasharray="4 3" />
+                <text x="262" y="114" font-size="10" font-weight="600" fill="#777777" text-anchor="middle">+X</text>
+                <path d="M 260 170 A 35 35 0 0 0 236.7 178.9" fill="none" stroke="#111111" stroke-width="1.2" />
+                <text x="246" y="166" font-size="11" font-weight="700" text-anchor="middle">α</text>
+
+                <line x1="260" y1="205" x2="233" y2="88" stroke="#16a34a" stroke-width="2.4" marker-end="url(#arrow-vff-green)" />
+                <text x="226" y="86" font-size="11" font-weight="700" fill="#16a34a" text-anchor="end">F_att</text>
+
+                <line x1="260" y1="205" x2="227" y2="255" stroke="#dc2626" stroke-width="2.4" marker-end="url(#arrow-vff-red)" />
+                <text x="218" y="268" font-size="11" font-weight="700" fill="#dc2626" text-anchor="end">F_rep</text>
+
+                <line x1="260" y1="205" x2="200" y2="138" stroke="#111111" stroke-width="2.4" marker-end="url(#arrow-vff-black)" />
+                <text x="192" y="136" font-size="11" font-weight="700" fill="#111111" text-anchor="end">F_res</text>
+
+                <rect x="245" y="205" width="30" height="50" rx="6" fill="#ffffff" stroke="#111111" stroke-width="1.8" />
+                <text x="260" y="234" font-size="10" font-weight="600" text-anchor="middle">F1</text>
+                <circle cx="260" cy="205" r="3.5" fill="#dc2626" />
+            </svg>
+            <figcaption>Figura 2. Vectores de atracción (verde), repulsión (rojo) y resultante (negro), con los mismos colores que la interfaz gráfica.</figcaption>
+        </figure>
+
+        <h3>3.2. Velocidad Lineal Igual al Módulo de la Resultante</h3>
+        <p>
+            Como la repulsión siempre tiene componente hacia atrás, al acercarse a un obstáculo resta componente frontal a la resultante. Si la velocidad lineal es el módulo de la resultante, el coche frena y gira más a la vez, de forma automática y proporcional a la cercanía del obstáculo, sin necesidad de reglas adicionales:
+        </p>
+        <div class="equation">
+            v = min(|F_res|, V_max)
+        </div>
+        <p>
+            Cuando el ángulo de la resultante supera los 90° (apunta hacia atrás), se distinguen dos casos. Si el objetivo está detrás del coche, este se detiene y gira en el sitio hacia el lado del objetivo. Si el objetivo está delante pero un obstáculo empuja más fuerte, avanza a una velocidad muy baja (<code>V_BACK</code>) mientras el controlador gira para buscar una salida.
+        </p>
+
+        <h3>3.3. Control PD de la Velocidad Angular</h3>
+        <p>
+            La velocidad angular lleva a cero el ángulo α de la resultante respecto al eje frontal del coche:
+        </p>
+        <div class="equation">
+            w(t) = Kp · α(t) + Kd · dα/dt
+        </div>
+        <p>
+            El término proporcional orienta el coche hacia la resultante, y el derivativo frena el giro cuando el ángulo ya está cambiando rápido, lo que evita pasarse al corregir. Frente a filtrar directamente la velocidad angular, la derivada corrige rápido sin añadir retardo, y el retardo es lo que provoca las oscilaciones.
+        </p>
+        <p>
+            Para calcular la derivada, la diferencia entre el ángulo actual y el anterior se normaliza al intervalo [−π, π]. Sin esta normalización, cuando la resultante apunta hacia atrás el ángulo pasa de +180° a −180°, y la derivada lo interpreta como un cambio enorme aunque en realidad apenas haya variado.
+        </p>
+
+        <h3>3.4. Objetivo Local Deslizante</h3>
+        <p>
+            Al principio el vector de atracción apuntaba directamente al waypoint. Al marcarlo como alcanzado, la atracción saltaba de golpe hacia el siguiente, y el término derivativo amplificaba ese salto: a 50 Hz, un cambio de 0,5 rad en un ciclo equivale a una derivada de 25 rad/s. El resultado era un volantazo en cada waypoint.
+        </p>
+        <p>
+            Para corregirlo, el coche persigue un objetivo local que se desliza hacia el waypoint actual a velocidad limitada (<code>LOCAL_SPEED</code>). Cuando se alcanza un waypoint, el objetivo local viaja de forma continua hacia el siguiente, de modo que el ángulo de la atracción cambia de forma progresiva y la derivada no da tirones. Además, el waypoint se da por alcanzado a <code>TARGET_TOL</code> = 3 m, con lo que el giro empieza antes y las curvas se trazan redondeadas en lugar de en pico.
+        </p>
+
+        <figure class="diagram">
+            <svg width="520" height="290" viewBox="0 0 520 290" xmlns="http://www.w3.org/2000/svg">
+                <line x1="40" y1="30" x2="70" y2="30" stroke="#111111" stroke-width="2.2" />
+                <text x="78" y="34" font-size="10" font-weight="600" text-anchor="start">Trayectoria con objetivo local</text>
+                <line x1="40" y1="50" x2="70" y2="50" stroke="#999999" stroke-width="1.6" stroke-dasharray="5 4" />
+                <text x="78" y="54" font-size="10" font-weight="600" fill="#555555" text-anchor="start">Trayectoria persiguiendo el waypoint</text>
+                <circle cx="55" cy="70" r="4" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" />
+                <text x="78" y="74" font-size="10" font-weight="600" fill="#2563eb" text-anchor="start">Posiciones sucesivas del objetivo local</text>
+
+                <circle cx="300" cy="212" r="45" fill="none" stroke="#666666" stroke-width="1.2" stroke-dasharray="4 3" />
+                <text x="300" y="275" font-size="10" font-weight="600" fill="#666666" text-anchor="middle">Radio TARGET_TOL</text>
+
+                <line x1="300" y1="212" x2="400" y2="70" stroke="#2563eb" stroke-width="1" stroke-dasharray="2 3" />
+                <circle cx="320" cy="183.6" r="4" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" />
+                <circle cx="340" cy="155.2" r="4" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" />
+                <circle cx="360" cy="126.8" r="4" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" />
+                <circle cx="380" cy="98.4" r="4" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" />
+
+                <path d="M 255 212 L 300 212 L 400 70" fill="none" stroke="#999999" stroke-width="1.6" stroke-dasharray="5 4" />
+                <path d="M 40 212 L 255 212 Q 320 212 400 70" fill="none" stroke="#111111" stroke-width="2.2" />
+
+                <circle cx="300" cy="212" r="6" fill="#16a34a" stroke="#111111" stroke-width="1.2" />
+                <text x="300" y="240" font-size="10" font-weight="700" fill="#16a34a" text-anchor="middle">Waypoint i</text>
+                <circle cx="400" cy="70" r="6" fill="#16a34a" stroke="#111111" stroke-width="1.2" />
+                <text x="412" y="74" font-size="10" font-weight="700" fill="#16a34a" text-anchor="start">Waypoint i+1</text>
+            </svg>
+            <figcaption>Figura 3. Cambio de waypoint con objetivo local deslizante frente a perseguir directamente el waypoint.</figcaption>
+        </figure>
+
+        <h3>3.5. Paso Estrecho entre Pared y Obstáculo</h3>
+        <p>
+            Uno de los inconvenientes conocidos del VFF es que oscila en pasillos estrechos, cuando recibe repulsión simultánea de ambos lados. Con <code>1/d²</code> esto se acentúa: al pasar entre la pared y un obstáculo, un pequeño desplazamiento lateral cambia mucho el equilibrio de fuerzas, el ángulo de la resultante salta de un ciclo a otro y la derivada multiplica esos saltos. Se aplicaron tres medidas:
+        </p>
+        <ol>
+            <li><strong>Filtro paso bajo de la repulsión:</strong> Suaviza los cambios bruscos entre ciclos. A 50 Hz el retardo que introduce es de pocas centésimas de segundo.</li>
+            <li><strong>Filtro paso bajo de la derivada:</strong> La derivada es el término más sensible al ruido, por lo que se filtra antes de usarla en el controlador.</li>
+            <li><strong>Saturación de la velocidad angular:</strong> Se limita a <code>W_MAX</code> = 3 rad/s para que ningún salto residual se convierta en un volantazo.</li>
+        </ol>
+        <p>
+            Ambos filtros son de primer orden:
+        </p>
+        <div class="equation">
+            y(t) = a · y(t-1) + (1 − a) · x(t)
+        </div>
+
+        <h2>4. Ajustes Prácticos y Simulación</h2>
+        <ul>
+            <li><strong>Paso de tiempo real:</strong> La derivada y el avance del objetivo local usan el tiempo real transcurrido entre ciclos en lugar de suponer un periodo fijo, de modo que siguen siendo coherentes aunque la simulación vaya más lenta en algún momento.</li>
+            <li><strong>Lecturas no válidas del láser:</strong> Los valores <code>NaN</code> o no positivos se descartan. Los <code>inf</code> se mantienen, ya que su repulsión es nula de forma natural.</li>
+            <li><strong>Desbloqueo:</strong> Si la velocidad lineal y la angular quedan a la vez prácticamente a cero, se aplica un giro mínimo para evitar que el coche se quede parado en un punto de equilibrio de fuerzas.</li>
+            <li><strong>Visualización de fuerzas:</strong> Los tres vectores se envían en cada ciclo a la interfaz gráfica, lo que permitió ver en tiempo real qué fuerza dominaba en cada situación durante el ajuste de parámetros.</li>
+        </ul>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Parámetro</th>
+                    <th>Valor</th>
+                    <th>Función</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>K_ATT</code></td>
+                    <td>2.0</td>
+                    <td>Ganancia del vector de atracción</td>
+                </tr>
+                <tr>
+                    <td><code>MIN_ATT</code> / <code>MAX_ATT</code></td>
+                    <td>1.0 / 4.0</td>
+                    <td>Límites del módulo de la atracción; <code>MAX_ATT</code> fija la velocidad de crucero</td>
+                </tr>
+                <tr>
+                    <td><code>TARGET_TOL</code></td>
+                    <td>3.0 m</td>
+                    <td>Distancia a la que se da un waypoint por alcanzado</td>
+                </tr>
+                <tr>
+                    <td><code>LOCAL_SPEED</code></td>
+                    <td>5.0 m/s</td>
+                    <td>Velocidad de desplazamiento del objetivo local</td>
+                </tr>
+                <tr>
+                    <td><code>K_REP</code></td>
+                    <td>5.0</td>
+                    <td>Ganancia del vector de repulsión</td>
+                </tr>
+                <tr>
+                    <td><code>REP_POWER</code></td>
+                    <td>2</td>
+                    <td>Exponente del decaimiento de la repulsión con la distancia</td>
+                </tr>
+                <tr>
+                    <td><code>REP_ALPHA</code> / <code>D_ALPHA</code></td>
+                    <td>0.5 / 0.7</td>
+                    <td>Coeficientes de los filtros de la repulsión y de la derivada</td>
+                </tr>
+                <tr>
+                    <td><code>KP</code> / <code>KD</code></td>
+                    <td>2.0 / 1.0</td>
+                    <td>Ganancias del controlador PD de la velocidad angular</td>
+                </tr>
+                <tr>
+                    <td><code>W_MAX</code></td>
+                    <td>3.0 rad/s</td>
+                    <td>Saturación de la velocidad angular</td>
+                </tr>
+                <tr>
+                    <td><code>V_MAX</code> / <code>V_BACK</code></td>
+                    <td>5.0 / 0.2 m/s</td>
+                    <td>Tope de la velocidad lineal y velocidad con la resultante hacia atrás</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>5. Demostración en Vídeo</h2>
+        <p>
+            A continuación se muestra la ejecución del algoritmo completando el circuito en el entorno simulado:
+        </p>
+
+        <figure class="video-container">
+            <div class="video-wrapper">
+                <video controls preload="metadata" playsinline>
+                    <source src="videoP3.mp4" type="video/mp4">
                     Tu navegador no soporta la reproducción de vídeo HTML5.
                 </video>
             </div>
